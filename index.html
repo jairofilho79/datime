@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Datime — Dá time</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-brand">
+      <h1 class="title">Datime</h1>
+      <p class="subtitle">Dá pra montar um time</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Alternar tema" title="Alternar tema">
+        <span id="theme-toggle-icon" aria-hidden="true">☀</span>
+      </button>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button type="button" id="tab-jogadores" class="tab active" role="tab" aria-selected="true" data-tab="jogadores">Jogadores</button>
+    <button type="button" id="tab-time" class="tab" role="tab" aria-selected="false" data-tab="time">Time</button>
+  </nav>
+
+  <main class="main">
+    <section id="panel-jogadores" class="panel active" role="tabpanel" aria-labelledby="tab-jogadores">
+      <div class="panel-inner">
+        <h2 class="panel-title">Jogadores</h2>
+        <!-- Formulário e lista serão injetados por JS -->
+        <div id="players-form-container"></div>
+        <div id="players-list-container"></div>
+        <div id="config-container"></div>
+        <div id="clear-container"></div>
+      </div>
+    </section>
+
+    <section id="panel-time" class="panel" role="tabpanel" aria-labelledby="tab-time" hidden aria-hidden="true">
+      <div class="panel-inner">
+        <div class="panel-time-header">
+          <h2 class="panel-title">Time</h2>
+          <button type="button" class="btn" id="btn-regenerate-teams">Gerar novamente</button>
+        </div>
+        <div id="teams-display-container"></div>
+        <div id="score-buttons-container"></div>
+        <div id="point-history-container"></div>
+        <div id="sets-history-container"></div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

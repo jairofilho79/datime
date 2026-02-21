@@ -1,0 +1,9 @@
+# Cursor / IDE
+.cursor/
+
+# macOS
+.DS_Store
+
+# Logs e temporários
+*.log
+*.tmp
