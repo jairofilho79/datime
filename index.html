@@ -22,8 +22,10 @@
   <main class="main">
     <section id="panel-jogadores" class="panel active" role="region" aria-label="Configurações">
       <div class="panel-inner">
-        <div id="clear-container"></div>
-        <h1 class="panel-title panel-title--page">Configurações</h1>
+        <header class="config-page-header">
+          <h1 class="panel-title panel-title--page">Configurações</h1>
+          <div id="clear-container"></div>
+        </header>
         <!-- Formulário e lista serão injetados por JS -->
         <div id="players-form-container"></div>
         <div id="players-list-container"></div>
@@ -35,10 +37,14 @@
     <section id="panel-time" class="panel" role="region" aria-label="Partida" hidden aria-hidden="true">
       <div class="panel-inner">
         <div class="panel-time-header">
-          <button type="button" class="btn btn-icon btn-back-config" id="btn-back-to-config" aria-label="Voltar para Configurações" title="Configurações">⚙</button>
-          <h2 class="panel-title">Partida</h2>
-          <button type="button" class="btn" id="btn-manual-assembly">Montagem manual</button>
-          <button type="button" class="btn" id="btn-regenerate-teams">Gerar novamente</button>
+          <div class="panel-time-header__top">
+            <button type="button" class="btn btn-icon btn-back-config" id="btn-back-to-config" aria-label="Voltar para Configurações" title="Configurações">⚙</button>
+            <h2 class="panel-title">Partida</h2>
+          </div>
+          <div class="panel-time-header__actions">
+            <button type="button" class="btn" id="btn-manual-assembly">Montagem manual</button>
+            <button type="button" class="btn" id="btn-regenerate-teams">Gerar novamente</button>
+          </div>
         </div>
         <div id="teams-display-container"></div>
         <div id="score-buttons-container"></div>
