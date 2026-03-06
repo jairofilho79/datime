@@ -2,7 +2,14 @@
  * Formação e remistura de times (balanceamento por grupo).
  */
 
-import { getState, setState } from './state.js';
+import { getState, setState, getPlayerName, ensureCurrentSeries } from './state.js';
+
+// Controle apenas visual da ordem de exibição dos blocos Time A / Time B.
+let invertTeamsDisplay = false;
+
+function setInvertTeamsDisplay(value) {
+  invertTeamsDisplay = Boolean(value);
+}
 
 function formTeamsIfNeeded(forceShuffle = false) {
   const { players, config, teams } = getState();
@@ -13,6 +20,7 @@ function formTeamsIfNeeded(forceShuffle = false) {
   const groups = getState().groups;
   const { teamA, teamB, reserves } = buildTeams(players, config.playersPerTeam, forceShuffle, groups);
   setState({ teams: { teamA, teamB, reserves } });
+  ensureCurrentSeries();
 }
 
 function shuffleArray(arr) {
@@ -24,13 +32,14 @@ function shuffleArray(arr) {
   return a;
 }
 
-/** Conta quantos sets cada jogador jogou (titular), a partir do histórico. */
-function getSetsPlayed(setsHistory) {
+/** Conta quantas partidas cada jogador jogou (titular), a partir do histórico de séries. */
+function getPartidasPlayed(seriesHistory) {
   const count = new Map();
-  if (!setsHistory || !setsHistory.length) return count;
-  for (const set of setsHistory) {
-    const ids = [...(set.teamAIds || []), ...(set.teamBIds || [])];
-    for (const id of ids) count.set(id, (count.get(id) || 0) + 1);
+  if (!seriesHistory || !seriesHistory.length) return count;
+  for (const serie of seriesHistory) {
+    const ids = [...(serie.teamAIds || []), ...(serie.teamBIds || [])];
+    const numPartidas = (serie.partidas || []).length;
+    for (const id of ids) count.set(id, (count.get(id) || 0) + numPartidas);
   }
   return count;
 }
@@ -75,7 +84,7 @@ function getGroupOrderForRoundRobin(byGroupKeys, groups) {
 }
 
 /**
- * Seleciona titulares em rodízio por grupo (mesma chance por grupo) e priorizando quem jogou menos sets.
+ * Seleciona titulares em rodízio por grupo (mesma chance por grupo) e priorizando quem jogou menos partidas.
  * Depois divide titulares em A/B por força (se groups) ou alternando (senão). Reservas = resto.
  */
 function buildTeams(players, playersPerTeam, shuffleWithinGroups = false, groups = null) {
@@ -83,7 +92,7 @@ function buildTeams(players, playersPerTeam, shuffleWithinGroups = false, groups
   const maxA = totalSlots === 0 ? 0 : Math.ceil(totalSlots / 2);
   const maxB = totalSlots === 0 ? 0 : Math.floor(totalSlots / 2);
 
-  const setsPlayed = getSetsPlayed(getState().setsHistory || []);
+  const partidasPlayed = getPartidasPlayed(getState().seriesHistory || []);
   const byGroup = new Map();
   for (const p of players) {
     if (!byGroup.has(p.groupId)) byGroup.set(p.groupId, []);
@@ -91,7 +100,7 @@ function buildTeams(players, playersPerTeam, shuffleWithinGroups = false, groups
   }
   for (const gid of byGroup.keys()) {
     const list = byGroup.get(gid);
-    list.sort((a, b) => (setsPlayed.get(a.id) || 0) - (setsPlayed.get(b.id) || 0));
+    list.sort((a, b) => (partidasPlayed.get(a.id) || 0) - (partidasPlayed.get(b.id) || 0));
     byGroup.set(gid, list);
   }
 
@@ -176,7 +185,7 @@ function buildTeams(players, playersPerTeam, shuffleWithinGroups = false, groups
 }
 
 /**
- * Remistura ao final do set: pouco (só reservas ou 20%), normal (40–60%), muito (80%).
+ * Remistura ao final da partida: pouco (só reservas ou 20%), normal (40–60%), muito (80%).
  * Reservas têm prioridade para entrar nos titulares.
  */
 function remix() {
@@ -197,19 +206,34 @@ function remix() {
     numToRotate = Math.max(1, Math.floor(numTitulares * 0.8));
   }
 
-  const setsPlayed = getSetsPlayed(getState().setsHistory || []);
-  const titularesByMostPlayed = [...titularesArray].sort((a, b) => (setsPlayed.get(b) || 0) - (setsPlayed.get(a) || 0));
+  const partidasPlayed = getPartidasPlayed(getState().seriesHistory || []);
+  const titularesByMostPlayed = [...titularesArray].sort((a, b) => (partidasPlayed.get(b) || 0) - (partidasPlayed.get(a) || 0));
   const toRemove = titularesByMostPlayed.slice(0, numToRotate);
   const stayTitulares = titularesArray.filter((id) => !toRemove.includes(id));
   const poolIds = [...teams.reserves, ...toRemove];
   const poolPlayers = poolIds.map((id) => players.find((p) => p.id === id)).filter(Boolean);
   const groups = getState().groups;
   const { teamA: newA, teamB: newB, reserves: newReserves } = buildTeamsWithReservePriority(poolPlayers, stayTitulares, n, groups);
-  setState({ teams: { teamA: newA, teamB: newB, reserves: newReserves } });
+
+  const seriesHistory = getState().seriesHistory || [];
+  const update = { teams: { teamA: newA, teamB: newB, reserves: newReserves } };
+  if (seriesHistory.length >= 1) {
+    const prevSerie = seriesHistory[seriesHistory.length - 1];
+    const prevA = prevSerie.teamAIds || [];
+    const prevB = prevSerie.teamBIds || [];
+    const prevReserves = prevSerie.reservesIds || [];
+    update.lastRemixSummary = {
+      enteredA: newA.filter((id) => !prevA.includes(id)),
+      enteredB: newB.filter((id) => !prevB.includes(id)),
+      enteredReserves: newReserves.filter((id) => !prevReserves.includes(id)),
+    };
+    update.remixCardCollapsed = false;
+  }
+  setState(update);
 }
 
 /**
- * Monta times na remistura: quem entra como titular na pool é quem jogou MENOS sets (sem privilégio por força).
+ * Monta times na remistura: quem entra como titular na pool é quem jogou MENOS partidas (sem privilégio por força).
  * Depois divide titulares (stay + escolhidos da pool) em A/B por força. Reservas = resto da pool.
  */
 function buildTeamsWithReservePriority(poolPlayers, stayIds, playersPerTeam, groups = null) {
@@ -219,8 +243,8 @@ function buildTeamsWithReservePriority(poolPlayers, stayIds, playersPerTeam, gro
   const maxB = totalSlots === 0 ? 0 : Math.floor(totalSlots / 2);
 
   const numNewFromPool = Math.max(0, totalSlots - stayIds.length);
-  const setsPlayed = getSetsPlayed(getState().setsHistory || []);
-  const poolSorted = [...poolPlayers].sort((a, b) => (setsPlayed.get(a.id) || 0) - (setsPlayed.get(b.id) || 0));
+  const partidasPlayed = getPartidasPlayed(getState().seriesHistory || []);
+  const poolSorted = [...poolPlayers].sort((a, b) => (partidasPlayed.get(a.id) || 0) - (partidasPlayed.get(b.id) || 0));
   const selectedFromPool = poolSorted.slice(0, numNewFromPool);
   const allPlayers = getState().players || [];
   const stayPlayers = stayIds.map((id) => allPlayers.find((p) => p.id === id)).filter(Boolean);
@@ -279,13 +303,12 @@ function buildTeamsWithReservePriority(poolPlayers, stayIds, playersPerTeam, gro
 function renderTeamsPanel() {
   const container = document.getElementById('teams-display-container');
   if (!container) return;
-  const { players, groups, teams } = getState();
+  const { groups, teams } = getState();
   const escapeHtml = (s) => {
     const div = document.createElement('div');
     div.textContent = s ?? '—';
     return div.innerHTML;
   };
-  const getName = (id) => players.find((p) => p.id === id)?.name ?? '—';
 
   container.innerHTML = '';
   const wrap = document.createElement('div');
@@ -295,27 +318,62 @@ function renderTeamsPanel() {
   teamABlock.className = 'team-block team-a';
   teamABlock.innerHTML = `
     <h3>Time A</h3>
-    <div class="team-members">${teams.teamA.length ? teams.teamA.map((id) => `<span>${escapeHtml(getName(id))}</span>`).join('') : '<span>—</span>'}</div>
+    <div class="team-members">${teams.teamA.length ? teams.teamA.map((id) => `<span>${escapeHtml(getPlayerName(id))}</span>`).join('') : '<span>—</span>'}</div>
   `;
-  wrap.appendChild(teamABlock);
 
   const teamBBlock = document.createElement('div');
   teamBBlock.className = 'team-block team-b';
   teamBBlock.innerHTML = `
     <h3>Time B</h3>
-    <div class="team-members">${teams.teamB.length ? teams.teamB.map((id) => `<span>${escapeHtml(getName(id))}</span>`).join('') : '<span>—</span>'}</div>
+    <div class="team-members">${teams.teamB.length ? teams.teamB.map((id) => `<span>${escapeHtml(getPlayerName(id))}</span>`).join('') : '<span>—</span>'}</div>
   `;
-  wrap.appendChild(teamBBlock);
+
+  const teamBlocks = invertTeamsDisplay ? [teamBBlock, teamABlock] : [teamABlock, teamBBlock];
+  for (const block of teamBlocks) {
+    wrap.appendChild(block);
+  }
 
   const reservesBlock = document.createElement('div');
   reservesBlock.className = 'reserves-block';
   reservesBlock.innerHTML = `
     <h3>Reservas</h3>
-    <div class="reserves-list">${teams.reserves.length ? teams.reserves.map((id) => escapeHtml(getName(id))).join(', ') : 'Nenhuma'}</div>
+    <div class="reserves-list">${teams.reserves.length ? teams.reserves.map((id) => escapeHtml(getPlayerName(id))).join(', ') : 'Nenhuma'}</div>
   `;
   wrap.appendChild(reservesBlock);
 
   container.appendChild(wrap);
+
+  const { lastRemixSummary, remixCardCollapsed } = getState();
+  if (!lastRemixSummary) return;
+  const enteredA = lastRemixSummary.enteredA ?? [];
+  const enteredB = lastRemixSummary.enteredB ?? [];
+  const enteredReserves = lastRemixSummary.enteredReserves ?? [];
+  const formatNames = (ids) =>
+    (ids && ids.length) ? ids.map((id) => getPlayerName(id)).join(', ') : '—';
+  const details = document.createElement('details');
+  details.className = 'remix-summary-card';
+  if (!remixCardCollapsed) details.setAttribute('open', '');
+  const summary = document.createElement('summary');
+  summary.textContent = 'Mudanças';
+  details.appendChild(summary);
+  const content = document.createElement('div');
+  content.className = 'remix-summary-content';
+  const rows = [
+    ['Time A', 'remix-label-team-a', enteredA],
+    ['Time B', 'remix-label-team-b', enteredB],
+    ['Reserva', 'remix-label-reserves', enteredReserves],
+  ];
+  for (const [label, labelClass, ids] of rows) {
+    const p = document.createElement('p');
+    const labelSpan = document.createElement('span');
+    labelSpan.className = labelClass;
+    labelSpan.textContent = label + ': ';
+    p.appendChild(labelSpan);
+    p.appendChild(document.createTextNode(formatNames(ids)));
+    content.appendChild(p);
+  }
+  details.appendChild(content);
+  container.appendChild(details);
 }
 
-export { formTeamsIfNeeded, buildTeams, buildTeamsWithReservePriority, remix, renderTeamsPanel };
+export { formTeamsIfNeeded, buildTeams, buildTeamsWithReservePriority, remix, renderTeamsPanel, setInvertTeamsDisplay };

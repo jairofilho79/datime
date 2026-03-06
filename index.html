@@ -19,33 +19,31 @@
     </div>
   </header>
 
-  <nav class="tabs" role="tablist">
-    <button type="button" id="tab-jogadores" class="tab active" role="tab" aria-selected="true" data-tab="jogadores">Jogadores</button>
-    <button type="button" id="tab-time" class="tab" role="tab" aria-selected="false" data-tab="time">Time</button>
-  </nav>
-
   <main class="main">
-    <section id="panel-jogadores" class="panel active" role="tabpanel" aria-labelledby="tab-jogadores">
+    <section id="panel-jogadores" class="panel active" role="region" aria-label="Configurações">
       <div class="panel-inner">
-        <h2 class="panel-title">Jogadores</h2>
+        <div id="clear-container"></div>
+        <h1 class="panel-title panel-title--page">Configurações</h1>
         <!-- Formulário e lista serão injetados por JS -->
         <div id="players-form-container"></div>
         <div id="players-list-container"></div>
         <div id="config-container"></div>
-        <div id="clear-container"></div>
+        <div id="play-match-container"></div>
       </div>
     </section>
 
-    <section id="panel-time" class="panel" role="tabpanel" aria-labelledby="tab-time" hidden aria-hidden="true">
+    <section id="panel-time" class="panel" role="region" aria-label="Partida" hidden aria-hidden="true">
       <div class="panel-inner">
         <div class="panel-time-header">
-          <h2 class="panel-title">Time</h2>
+          <button type="button" class="btn btn-icon btn-back-config" id="btn-back-to-config" aria-label="Voltar para Configurações" title="Configurações">⚙</button>
+          <h2 class="panel-title">Partida</h2>
+          <button type="button" class="btn" id="btn-manual-assembly">Montagem manual</button>
           <button type="button" class="btn" id="btn-regenerate-teams">Gerar novamente</button>
         </div>
         <div id="teams-display-container"></div>
         <div id="score-buttons-container"></div>
         <div id="point-history-container"></div>
-        <div id="sets-history-container"></div>
+        <div id="partidas-history-container"></div>
       </div>
     </section>
   </main>

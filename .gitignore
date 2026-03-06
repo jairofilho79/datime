@@ -1,9 +1,35 @@
+# Dependências
+node_modules/
+
 # Cursor / IDE
 .cursor/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
 
 # macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
 
 # Logs e temporários
 *.log
 *.tmp
+*.temp
+.npm
+.cache/
+
+# Ambiente / variáveis
+.env
+.env.local
+.env.*.local
+
+# Build / dist (se usar no futuro)
+dist/
+build/
+*.min.js
+*.min.css

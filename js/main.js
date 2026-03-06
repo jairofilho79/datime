@@ -7,10 +7,9 @@ import * as state from './state.js';
 import * as players from './players.js';
 import * as teams from './teams.js';
 import * as scoring from './scoring.js';
+import * as manualAssembly from './manualAssembly.js';
 import dialog from './dialog.js';
 
-const TAB_JOGADORES = 'jogadores';
-const TAB_TIME = 'time';
 const THEME_KEY = 'datime_theme';
 
 function getTheme() {
@@ -38,46 +37,37 @@ function initTheme() {
   });
 }
 
-function initTabs() {
-  const tabButtons = document.querySelectorAll('.tabs .tab');
+function showPartidaPage() {
   const panelJogadores = document.getElementById('panel-jogadores');
   const panelTime = document.getElementById('panel-time');
+  panelJogadores.classList.remove('active');
+  panelJogadores.setAttribute('hidden', '');
+  panelTime.classList.add('active');
+  panelTime.removeAttribute('hidden');
+  teams.formTeamsIfNeeded();
+  teams.renderTeamsPanel();
+  scoring.renderScoreButtons();
+  scoring.renderPointHistoryPanel();
+  scoring.renderPartidasHistory();
+}
 
-  tabButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const tab = btn.getAttribute('data-tab');
-      tabButtons.forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
-      btn.setAttribute('aria-selected', 'true');
-
-      if (tab === TAB_JOGADORES) {
-        panelJogadores.classList.add('active');
-        panelJogadores.removeAttribute('hidden');
-        panelTime.classList.remove('active');
-        panelTime.setAttribute('hidden', '');
-        tabButtons[1].setAttribute('aria-selected', 'false');
-        players.render();
-      } else {
-        panelTime.classList.add('active');
-        panelTime.removeAttribute('hidden');
-        panelJogadores.classList.remove('active');
-        panelJogadores.setAttribute('hidden', '');
-        tabButtons[0].setAttribute('aria-selected', 'false');
-        teams.formTeamsIfNeeded();
-        teams.renderTeamsPanel();
-        scoring.renderScoreButtons();
-        scoring.renderPointHistoryPanel();
-        scoring.renderSetsHistory();
-      }
-    });
-  });
+function showConfiguracoesPage() {
+  const panelJogadores = document.getElementById('panel-jogadores');
+  const panelTime = document.getElementById('panel-time');
+  panelTime.classList.remove('active');
+  panelTime.setAttribute('hidden', '');
+  panelJogadores.classList.add('active');
+  panelJogadores.removeAttribute('hidden');
+  players.render();
 }
 
 function init() {
   initTheme();
   state.load();
-  initTabs();
+  players.setOnPlayMatchClick(showPartidaPage);
   players.render();
+  document.getElementById('btn-back-to-config')?.addEventListener('click', showConfiguracoesPage);
+  document.getElementById('btn-manual-assembly')?.addEventListener('click', () => manualAssembly.open());
   document.getElementById('btn-regenerate-teams')?.addEventListener('click', () => {
     dialog.open({
       title: 'Gerar times novamente',
@@ -98,7 +88,7 @@ init();
 
 // Exportar para outros módulos chamarem re-render quando necessário
 export function switchToTimeTab() {
-  document.querySelector('.tabs .tab[data-tab="time"]').click();
+  showPartidaPage();
 }
 
 export { state, players, teams, scoring };
