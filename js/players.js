@@ -232,8 +232,8 @@ function render() {
       <h3 class="entry-panel-title">Importar lista</h3>
       <p class="entry-hint">A importação substitui a lista atual.</p>
       <div class="config-row">
-        <label for="players-import">Uma linha por jogador (opcional: , grupo)</label>
-        <textarea id="players-import" rows="5" placeholder="Jairo, 3&#10;Ana G&#10;1. Pedro"></textarea>
+        <label for="players-import">Uma linha por jogador (Nome | grupo ou Nome, grupo)</label>
+        <textarea id="players-import" rows="5" placeholder="NOME. | GRUPO&#10;Mateus | 3&#10;Ana Maria, 2&#10;1. Pedro André"></textarea>
       </div>
       <div class="config-row">
         <button type="button" class="btn btn-outlined btn-block" id="btn-import-players">Importar</button>
@@ -499,12 +499,15 @@ function addPlayer() {
 function parseImportLine(line) {
   let s = line.replace(/[\u00ad\u200b-\u200f\u2028-\u202f\u2060\uFEFF]/g, '').trim();
   if (!s) return null;
+  // header opcional (NOME | GRUPO / NOME, GRUPO) e linhas só de separador
+  if (/^nome\.?\s*[,|｜│]?\s*grupo\.?$/i.test(s) || /^[-|=_\s,|｜│]+$/.test(s)) return null;
   s = s.replace(/^(?:\d+[.)]|[A-Za-z][.)]|[-*•–—])\s*/, '').trim();
   if (!s) return null;
-  const withGroup = s.match(/^(.*?),\s*(\d+)\s*$/);
-  if (withGroup) {
-    const name = withGroup[1].trim().slice(0, 24);
-    const groupNum = parseInt(withGroup[2], 10);
+  s = s.replace(/[｜│]/g, '|');
+  const withSep = s.match(/^(.*?)(?:\||,)\s*(\d+)\s*$/);
+  if (withSep) {
+    const name = withSep[1].trim().slice(0, 24);
+    const groupNum = parseInt(withSep[2], 10);
     if (!name || !Number.isFinite(groupNum) || groupNum < 1) return null;
     return { name, groupNum };
   }
@@ -545,7 +548,7 @@ function importPlayers() {
     if (row) parsed.push(row);
   }
   if (parsed.length === 0) {
-    dialog.error('Cole nomes (ou nome, grupo)', 'Importar');
+    dialog.error('Cole nomes (Nome | grupo ou Nome, grupo)', 'Importar');
     return;
   }
   const { players: currentPlayers } = getState();
@@ -575,13 +578,14 @@ function formatPlayersExport(players, groups) {
     if (orderA !== orderB) return orderA - orderB;
     return (a.name || '').localeCompare(b.name || '', 'pt-BR');
   });
-  return sorted
-    .map((p) => {
-      const idx = groups.findIndex((g) => g.id === p.groupId);
-      const n = idx === -1 ? 1 : idx + 1;
-      return `${p.name}, ${n}`;
-    })
-    .join('\n');
+  if (sorted.length === 0) return '';
+  const width = Math.max(5, ...sorted.map((p) => (p.name || '').length));
+  const rows = sorted.map((p) => {
+    const idx = groups.findIndex((g) => g.id === p.groupId);
+    const n = idx === -1 ? 1 : idx + 1;
+    return `${(p.name || '').padEnd(width)} | ${n}`;
+  });
+  return [`${'NOME.'.padEnd(width)} | GRUPO`, ...rows].join('\n');
 }
 
 async function copyPlayersExport() {
