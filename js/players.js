@@ -233,7 +233,7 @@ function render() {
       <p class="entry-hint">A importação substitui a lista atual.</p>
       <div class="config-row">
         <label for="players-import">Uma linha por jogador (Nome | grupo ou Nome, grupo)</label>
-        <textarea id="players-import" rows="5" placeholder="NOME. | GRUPO&#10;Mateus | 3&#10;Ana Maria, 2&#10;1. Pedro André"></textarea>
+        <textarea id="players-import" rows="5" placeholder="NOME | GRUPO&#10;Mateus | 3&#10;Ana Maria, 2&#10;1. Pedro André"></textarea>
       </div>
       <div class="config-row">
         <button type="button" class="btn btn-outlined btn-block" id="btn-import-players">Importar</button>
@@ -568,6 +568,29 @@ function importPlayers() {
   doImport();
 }
 
+// ponytail: measureText with body font — char padEnd looks crooked in system-ui
+function exportMeasureCtx() {
+  if (!exportMeasureCtx.ctx) {
+    exportMeasureCtx.ctx = document.createElement('canvas').getContext('2d');
+  }
+  const ctx = exportMeasureCtx.ctx;
+  const style = getComputedStyle(document.body);
+  ctx.font = `${style.fontSize} ${style.fontFamily}`;
+  return ctx;
+}
+
+function exportTextWidth(text) {
+  return exportMeasureCtx().measureText(text).width;
+}
+
+function padEndVisual(text, targetPx) {
+  const spaceW = exportTextWidth(' ');
+  if (spaceW <= 0) return text;
+  let out = text;
+  while (exportTextWidth(out) + spaceW * 0.5 < targetPx) out += ' ';
+  return out;
+}
+
 // ponytail: group index+1 so round-trip works with manual group ids
 function formatPlayersExport(players, groups) {
   const sorted = [...players].sort((a, b) => {
@@ -579,13 +602,16 @@ function formatPlayersExport(players, groups) {
     return (a.name || '').localeCompare(b.name || '', 'pt-BR');
   });
   if (sorted.length === 0) return '';
-  const width = Math.max(5, ...sorted.map((p) => (p.name || '').length));
-  const rows = sorted.map((p) => {
+  const names = sorted.map((p) => p.name || '');
+  // +1 espaço antes do |, medido na mesma fonte do HTML
+  const targetPx =
+    Math.max(exportTextWidth('NOME'), ...names.map(exportTextWidth)) + exportTextWidth(' ');
+  const rows = sorted.map((p, i) => {
     const idx = groups.findIndex((g) => g.id === p.groupId);
     const n = idx === -1 ? 1 : idx + 1;
-    return `${(p.name || '').padEnd(width)} | ${n}`;
+    return `${padEndVisual(names[i], targetPx)}| ${n}`;
   });
-  return [`${'NOME.'.padEnd(width)} | GRUPO`, ...rows].join('\n');
+  return [`${padEndVisual('NOME', targetPx)}| GRUPO`, ...rows].join('\n');
 }
 
 async function copyPlayersExport() {
