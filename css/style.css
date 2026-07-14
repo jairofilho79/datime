@@ -286,6 +286,11 @@ body {
   width: 100%;
 }
 
+.btn-sm {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+}
+
 .btn-outlined {
   background: transparent;
   color: var(--text-muted);
@@ -296,6 +301,11 @@ body {
   background: var(--surface2);
   color: var(--text);
   border-color: var(--text-muted);
+}
+
+.btn-outlined:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* Lista de jogadores */
@@ -383,6 +393,100 @@ body {
   margin: 0 0 0.75rem;
   font-size: 0.9375rem;
   font-weight: 600;
+}
+
+/* Entrada: um modo por vez (adicionar | importar) */
+.entry-card {
+  border-left: 3px solid var(--accent-a);
+}
+
+.entry-card--import {
+  border-left-color: var(--accent-b);
+}
+
+.entry-mode-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  padding: 0.25rem;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.entry-mode-tab {
+  padding: 0.5rem 0.65rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.entry-mode-tab:hover {
+  color: var(--text);
+  background: var(--surface2);
+}
+
+.entry-mode-tab:focus-visible {
+  outline: 2px solid var(--accent-a);
+  outline-offset: 1px;
+}
+
+.entry-mode-tab.is-active {
+  color: var(--text);
+  background: var(--surface2);
+  border-color: var(--border);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.entry-card--add .entry-mode-tab.is-active {
+  border-color: rgba(59, 130, 246, 0.45);
+  color: #fff;
+  background: rgba(59, 130, 246, 0.18);
+}
+
+.entry-card--import .entry-mode-tab.is-active {
+  border-color: rgba(34, 197, 94, 0.45);
+  color: #fff;
+  background: rgba(34, 197, 94, 0.18);
+}
+
+[data-theme="light"] .entry-card--add .entry-mode-tab.is-active,
+[data-theme="light"] .entry-card--import .entry-mode-tab.is-active {
+  color: var(--text);
+}
+
+.entry-panel-title {
+  margin: 0 0 0.75rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.entry-hint {
+  margin: -0.35rem 0 0.85rem;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.list-card {
+  border-left: 3px solid var(--text-muted);
+}
+
+.list-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.list-card-header h3 {
+  margin: 0;
 }
 
 .config-presets {

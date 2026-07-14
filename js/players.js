@@ -49,6 +49,9 @@ const SPORT_PRESETS = {
 
 let lastCreatedGroupId = null;
 let onPlayMatchClick = null;
+/** @type {'add' | 'import'} */
+let entryMode = 'add';
+let preservedImportText = '';
 
 function setOnPlayMatchClick(fn) {
   onPlayMatchClick = typeof fn === 'function' ? fn : null;
@@ -63,6 +66,10 @@ function render() {
   if (!formContainer || !listContainer || !clearContainer || !playMatchContainer) return;
 
   const preservedPlayerName = document.getElementById('player-name')?.value ?? '';
+  if (entryMode === 'import') {
+    const importTaEl = document.getElementById('players-import');
+    if (importTaEl) preservedImportText = importTaEl.value;
+  }
   const { groups, players, config } = getState();
 
   clearContainer.innerHTML = '';
@@ -106,101 +113,139 @@ function render() {
   listContainer.innerHTML = '';
   if (configContainer) configContainer.innerHTML = '';
 
-  // Card "Novo Jogador" no mesmo estilo de Configurações
-  const form = document.createElement('div');
-  form.className = 'new-player-card config-block';
-  form.innerHTML = `
-    <h3>Novo Jogador</h3>
-    <div class="config-row">
-      <label for="player-name">Nome</label>
-      <input type="text" id="player-name" placeholder="Nome do jogador" maxlength="24" />
-    </div>
-    <div class="config-row">
-      <span class="label-with-info" id="group-label-with-info" role="button" tabindex="0" aria-label="O que são grupos?">
-        <span class="label-text">Grupo</span>
-        <span class="info-icon" aria-hidden="true">!</span>
-      </span>
-      <select id="player-group" aria-label="Grupo do novo jogador"></select>
-    </div>
-    <div class="config-row">
-      <button type="button" class="btn btn-primary btn-block" id="btn-add-player">Adicionar jogador</button>
-    </div>
-  `;
-  formContainer.appendChild(form);
+  const entryCard = document.createElement('div');
+  entryCard.className = `config-block entry-card entry-card--${entryMode}`;
 
-  const groupSelect = form.querySelector('#player-group');
-  groups.forEach((g) => {
-    const opt = document.createElement('option');
-    opt.value = g.id;
-    opt.textContent = g.name;
-    groupSelect.appendChild(opt);
-  });
-  const newGroupOpt = document.createElement('option');
-  newGroupOpt.value = NEW_GROUP_VALUE;
-  newGroupOpt.textContent = '+ Novo grupo';
-  groupSelect.appendChild(newGroupOpt);
+  const modeTabs = document.createElement('div');
+  modeTabs.className = 'entry-mode-tabs';
+  modeTabs.setAttribute('role', 'tablist');
+  modeTabs.setAttribute('aria-label', 'Como adicionar jogadores');
 
-  groupSelect.addEventListener('change', () => {
-    if (groupSelect.value === NEW_GROUP_VALUE) {
-      addGroup();
-    }
+  const tabAdd = document.createElement('button');
+  tabAdd.type = 'button';
+  tabAdd.className = 'entry-mode-tab' + (entryMode === 'add' ? ' is-active' : '');
+  tabAdd.id = 'entry-mode-add';
+  tabAdd.setAttribute('role', 'tab');
+  tabAdd.setAttribute('aria-selected', entryMode === 'add' ? 'true' : 'false');
+  tabAdd.textContent = 'Adicionar um';
+  tabAdd.addEventListener('click', () => {
+    if (entryMode === 'add') return;
+    const ta = document.getElementById('players-import');
+    if (ta) preservedImportText = ta.value;
+    entryMode = 'add';
+    render();
   });
 
-  form.querySelector('#btn-add-player').addEventListener('click', addPlayer);
+  const tabImport = document.createElement('button');
+  tabImport.type = 'button';
+  tabImport.className = 'entry-mode-tab' + (entryMode === 'import' ? ' is-active' : '');
+  tabImport.id = 'entry-mode-import';
+  tabImport.setAttribute('role', 'tab');
+  tabImport.setAttribute('aria-selected', entryMode === 'import' ? 'true' : 'false');
+  tabImport.textContent = 'Importar lista';
+  tabImport.addEventListener('click', () => {
+    if (entryMode === 'import') return;
+    entryMode = 'import';
+    render();
+  });
 
-  if (lastCreatedGroupId) {
-    groupSelect.value = lastCreatedGroupId;
-    lastCreatedGroupId = null;
-  }
-  if (preservedPlayerName) {
-    form.querySelector('#player-name').value = preservedPlayerName;
-  }
+  modeTabs.appendChild(tabAdd);
+  modeTabs.appendChild(tabImport);
+  entryCard.appendChild(modeTabs);
 
-  const groupInfoTrigger = form.querySelector('#group-label-with-info');
-  if (groupInfoTrigger) {
-    const openGroupInfo = () => {
-      dialog.info(
-        'Os grupos servem apenas para equilibrar a força dos times (Time A vs Time B). Eles não definem quem é titular ou reserva — isso é definido pelo número de partidas jogadas, para que todos tenham chance parecida de jogar. Quanto menor o número do grupo (ex.: Grupo 1), mais influente é esse grupo na pontuação do time. Pessoas do mesmo grupo têm aproximadamente a mesma chance de ajudar o time a marcar pontos.',
-        'O que são grupos?'
-      );
-    };
-    groupInfoTrigger.addEventListener('click', openGroupInfo);
-    groupInfoTrigger.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        openGroupInfo();
+  if (entryMode === 'add') {
+    const form = document.createElement('div');
+    form.className = 'entry-panel';
+    form.id = 'entry-panel-add';
+    form.setAttribute('role', 'tabpanel');
+    form.setAttribute('aria-labelledby', 'entry-mode-add');
+    form.innerHTML = `
+      <h3 class="entry-panel-title">Novo jogador</h3>
+      <div class="config-row">
+        <label for="player-name">Nome</label>
+        <input type="text" id="player-name" placeholder="Nome do jogador" maxlength="24" />
+      </div>
+      <div class="config-row">
+        <span class="label-with-info" id="group-label-with-info" role="button" tabindex="0" aria-label="O que são grupos?">
+          <span class="label-text">Grupo</span>
+          <span class="info-icon" aria-hidden="true">!</span>
+        </span>
+        <select id="player-group" aria-label="Grupo do novo jogador"></select>
+      </div>
+      <div class="config-row">
+        <button type="button" class="btn btn-primary btn-block" id="btn-add-player">Adicionar jogador</button>
+      </div>
+    `;
+    entryCard.appendChild(form);
+
+    const groupSelect = form.querySelector('#player-group');
+    groups.forEach((g) => {
+      const opt = document.createElement('option');
+      opt.value = g.id;
+      opt.textContent = g.name;
+      groupSelect.appendChild(opt);
+    });
+    const newGroupOpt = document.createElement('option');
+    newGroupOpt.value = NEW_GROUP_VALUE;
+    newGroupOpt.textContent = '+ Novo grupo';
+    groupSelect.appendChild(newGroupOpt);
+
+    groupSelect.addEventListener('change', () => {
+      if (groupSelect.value === NEW_GROUP_VALUE) {
+        addGroup();
       }
     });
+
+    form.querySelector('#btn-add-player').addEventListener('click', addPlayer);
+
+    if (lastCreatedGroupId) {
+      groupSelect.value = lastCreatedGroupId;
+      lastCreatedGroupId = null;
+    }
+    if (preservedPlayerName) {
+      form.querySelector('#player-name').value = preservedPlayerName;
+    }
+
+    const groupInfoTrigger = form.querySelector('#group-label-with-info');
+    if (groupInfoTrigger) {
+      const openGroupInfo = () => {
+        dialog.info(
+          'Os grupos servem apenas para equilibrar a força dos times (Time A vs Time B). Eles não definem quem é titular ou reserva — isso é definido pelo número de partidas jogadas, para que todos tenham chance parecida de jogar. Quanto menor o número do grupo (ex.: Grupo 1), mais influente é esse grupo na pontuação do time. Pessoas do mesmo grupo têm aproximadamente a mesma chance de ajudar o time a marcar pontos.',
+          'O que são grupos?'
+        );
+      };
+      groupInfoTrigger.addEventListener('click', openGroupInfo);
+      groupInfoTrigger.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openGroupInfo();
+        }
+      });
+    }
+  } else {
+    const importPanel = document.createElement('div');
+    importPanel.className = 'entry-panel';
+    importPanel.id = 'entry-panel-import';
+    importPanel.setAttribute('role', 'tabpanel');
+    importPanel.setAttribute('aria-labelledby', 'entry-mode-import');
+    importPanel.innerHTML = `
+      <h3 class="entry-panel-title">Importar lista</h3>
+      <p class="entry-hint">A importação substitui a lista atual.</p>
+      <div class="config-row">
+        <label for="players-import">Uma linha por jogador (opcional: , grupo)</label>
+        <textarea id="players-import" rows="5" placeholder="Jairo, 3&#10;Ana G&#10;1. Pedro"></textarea>
+      </div>
+      <div class="config-row">
+        <button type="button" class="btn btn-outlined btn-block" id="btn-import-players">Importar</button>
+      </div>
+    `;
+    entryCard.appendChild(importPanel);
+    const importTa = importPanel.querySelector('#players-import');
+    if (preservedImportText) importTa.value = preservedImportText;
+    importPanel.querySelector('#btn-import-players').addEventListener('click', importPlayers);
   }
 
-  const importCard = document.createElement('div');
-  importCard.className = 'config-block';
-  const importTitle = document.createElement('h3');
-  importTitle.textContent = 'Importar';
-  importCard.appendChild(importTitle);
-  const importRow = document.createElement('div');
-  importRow.className = 'config-row';
-  const importLabel = document.createElement('label');
-  importLabel.htmlFor = 'players-import';
-  importLabel.textContent = 'Uma linha por jogador (opcional: , grupo)';
-  const importTa = document.createElement('textarea');
-  importTa.id = 'players-import';
-  importTa.rows = 5;
-  importTa.placeholder = 'Jairo, 3\nAna G\n1. Pedro';
-  importRow.appendChild(importLabel);
-  importRow.appendChild(importTa);
-  importCard.appendChild(importRow);
-  const importBtnRow = document.createElement('div');
-  importBtnRow.className = 'config-row';
-  const importBtn = document.createElement('button');
-  importBtn.type = 'button';
-  importBtn.className = 'btn btn-primary btn-block';
-  importBtn.id = 'btn-import-players';
-  importBtn.textContent = 'Importar';
-  importBtn.addEventListener('click', importPlayers);
-  importBtnRow.appendChild(importBtn);
-  importCard.appendChild(importBtnRow);
-  formContainer.appendChild(importCard);
+  formContainer.appendChild(entryCard);
 
   // Ordenar: por ordem do grupo (Grupo 1, 2, …), depois alfabético pelo nome
   const sortedPlayers = [...players].sort((a, b) => {
@@ -216,7 +261,6 @@ function render() {
   for (const p of players) {
     countByGroup.set(p.groupId, (countByGroup.get(p.groupId) || 0) + 1);
   }
-  const shortGroupName = (g) => g.name.replace(/^Grupo\s*/i, 'G') || g.name.slice(0, 2);
   const statsParts = groups.map((g) => `${g.name} (${countByGroup.get(g.id) || 0})`);
   const groupStatsLine = statsParts.length ? statsParts.join(' ·  · ') : '';
   const totalLine = players.length ? `Total (${players.length})` : 'Nenhum jogador';
@@ -224,7 +268,10 @@ function render() {
   const listCard = document.createElement('div');
   listCard.className = 'config-block list-card';
   listCard.innerHTML = `
-    <h3>Lista</h3>
+    <div class="list-card-header">
+      <h3>Lista</h3>
+      <button type="button" class="btn btn-outlined btn-sm" id="btn-copy-players-export"${players.length === 0 ? ' disabled' : ''}>Copiar lista</button>
+    </div>
     <p class="list-card-subtitle">
       ${groupStatsLine ? `<span class="list-card-stats-groups">${escapeHtml(groupStatsLine)}</span>` : ''}
       <span class="list-card-stats-total">${escapeHtml(totalLine)}</span>
@@ -233,9 +280,9 @@ function render() {
   `;
   const ul = listCard.querySelector('.players-list');
   listContainer.appendChild(listCard);
+  listCard.querySelector('#btn-copy-players-export').addEventListener('click', copyPlayersExport);
 
   sortedPlayers.forEach((p) => {
-    const group = groups.find((g) => g.id === p.groupId);
     const li = document.createElement('li');
     li.dataset.id = p.id;
     const groupSelectId = 'player-group-select-' + p.id;
@@ -259,44 +306,6 @@ function render() {
     li.querySelector('.btn-remove').addEventListener('click', () => confirmRemovePlayer(p.id));
     ul.appendChild(li);
   });
-
-  const exportBtnRow = document.createElement('div');
-  exportBtnRow.className = 'config-row';
-  const exportBtn = document.createElement('button');
-  exportBtn.type = 'button';
-  exportBtn.className = 'btn btn-primary btn-block';
-  exportBtn.id = 'btn-export-players';
-  exportBtn.textContent = 'Exportar';
-  exportBtn.addEventListener('click', exportPlayers);
-  exportBtnRow.appendChild(exportBtn);
-  listCard.appendChild(exportBtnRow);
-
-  const exportBlock = document.createElement('div');
-  exportBlock.id = 'players-export-block';
-  exportBlock.hidden = true;
-  const exportTaRow = document.createElement('div');
-  exportTaRow.className = 'config-row';
-  const exportLabel = document.createElement('label');
-  exportLabel.htmlFor = 'players-export';
-  exportLabel.textContent = 'Lista exportada';
-  const exportTa = document.createElement('textarea');
-  exportTa.id = 'players-export';
-  exportTa.rows = 5;
-  exportTa.readOnly = true;
-  exportTaRow.appendChild(exportLabel);
-  exportTaRow.appendChild(exportTa);
-  exportBlock.appendChild(exportTaRow);
-  const copyBtnRow = document.createElement('div');
-  copyBtnRow.className = 'config-row';
-  const copyBtn = document.createElement('button');
-  copyBtn.type = 'button';
-  copyBtn.className = 'btn btn-primary btn-block';
-  copyBtn.id = 'btn-copy-players-export';
-  copyBtn.textContent = 'Copiar';
-  copyBtn.addEventListener('click', copyPlayersExport);
-  copyBtnRow.appendChild(copyBtn);
-  exportBlock.appendChild(copyBtnRow);
-  listCard.appendChild(exportBlock);
 
   const { removedPlayers } = getState();
   if (removedPlayers.length > 0) {
@@ -503,18 +512,7 @@ function parseImportLine(line) {
   return name ? { name, groupNum: 1 } : null;
 }
 
-function importPlayers() {
-  const ta = document.getElementById('players-import');
-  const text = ta?.value || '';
-  const parsed = [];
-  for (const line of text.split('\n')) {
-    const row = parseImportLine(line);
-    if (row) parsed.push(row);
-  }
-  if (parsed.length === 0) {
-    dialog.error('Cole nomes (ou nome, grupo)', 'Importar');
-    return;
-  }
+function applyImportedPlayers(parsed) {
   const maxGroup = Math.max(...parsed.map((p) => p.groupNum));
   const groups = Array.from({ length: maxGroup }, (_, i) => ({
     id: 'g' + (i + 1),
@@ -533,8 +531,38 @@ function importPlayers() {
     removedPlayers: [],
     lastRemixSummary: null,
   });
-  if (ta) ta.value = '';
+  preservedImportText = '';
+  entryMode = 'add';
   render();
+}
+
+function importPlayers() {
+  const ta = document.getElementById('players-import');
+  const text = ta?.value || '';
+  const parsed = [];
+  for (const line of text.split('\n')) {
+    const row = parseImportLine(line);
+    if (row) parsed.push(row);
+  }
+  if (parsed.length === 0) {
+    dialog.error('Cole nomes (ou nome, grupo)', 'Importar');
+    return;
+  }
+  const { players: currentPlayers } = getState();
+  const doImport = () => applyImportedPlayers(parsed);
+  if (currentPlayers.length > 0) {
+    dialog.open({
+      title: 'Substituir lista?',
+      message: `A importação substitui os ${currentPlayers.length} jogador(es) atuais por ${parsed.length} da lista colada.`,
+      variant: 'alert',
+      buttons: [
+        { label: 'Cancelar', primary: false },
+        { label: 'Substituir', primary: true, callback: doImport },
+      ],
+    });
+    return;
+  }
+  doImport();
 }
 
 // ponytail: group index+1 so round-trip works with manual group ids
@@ -556,28 +584,18 @@ function formatPlayersExport(players, groups) {
     .join('\n');
 }
 
-function exportPlayers() {
-  const { players, groups } = getState();
-  const text = formatPlayersExport(players, groups);
-  const block = document.getElementById('players-export-block');
-  const ta = document.getElementById('players-export');
-  if (ta) ta.value = text;
-  if (block) block.hidden = false;
-}
-
 async function copyPlayersExport() {
   const { players, groups } = getState();
-  const ta = document.getElementById('players-export');
-  const text = (ta?.value || '').trim() || formatPlayersExport(players, groups);
+  const text = formatPlayersExport(players, groups);
   if (!text) {
-    dialog.error('Nenhum jogador para copiar', 'Copiar');
+    dialog.error('Nenhum jogador para copiar', 'Copiar lista');
     return;
   }
   try {
     await navigator.clipboard.writeText(text);
-    dialog.info('Lista copiada!', 'Copiar');
+    dialog.info('Lista copiada!', 'Copiar lista');
   } catch {
-    dialog.error('Não foi possível copiar. Tente selecionar o texto manualmente.', 'Copiar');
+    dialog.error('Não foi possível copiar. Selecione o texto manualmente.', 'Copiar lista');
   }
 }
 
