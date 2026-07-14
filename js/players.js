@@ -260,6 +260,44 @@ function render() {
     ul.appendChild(li);
   });
 
+  const exportBtnRow = document.createElement('div');
+  exportBtnRow.className = 'config-row';
+  const exportBtn = document.createElement('button');
+  exportBtn.type = 'button';
+  exportBtn.className = 'btn btn-primary btn-block';
+  exportBtn.id = 'btn-export-players';
+  exportBtn.textContent = 'Exportar';
+  exportBtn.addEventListener('click', exportPlayers);
+  exportBtnRow.appendChild(exportBtn);
+  listCard.appendChild(exportBtnRow);
+
+  const exportBlock = document.createElement('div');
+  exportBlock.id = 'players-export-block';
+  exportBlock.hidden = true;
+  const exportTaRow = document.createElement('div');
+  exportTaRow.className = 'config-row';
+  const exportLabel = document.createElement('label');
+  exportLabel.htmlFor = 'players-export';
+  exportLabel.textContent = 'Lista exportada';
+  const exportTa = document.createElement('textarea');
+  exportTa.id = 'players-export';
+  exportTa.rows = 5;
+  exportTa.readOnly = true;
+  exportTaRow.appendChild(exportLabel);
+  exportTaRow.appendChild(exportTa);
+  exportBlock.appendChild(exportTaRow);
+  const copyBtnRow = document.createElement('div');
+  copyBtnRow.className = 'config-row';
+  const copyBtn = document.createElement('button');
+  copyBtn.type = 'button';
+  copyBtn.className = 'btn btn-primary btn-block';
+  copyBtn.id = 'btn-copy-players-export';
+  copyBtn.textContent = 'Copiar';
+  copyBtn.addEventListener('click', copyPlayersExport);
+  copyBtnRow.appendChild(copyBtn);
+  exportBlock.appendChild(copyBtnRow);
+  listCard.appendChild(exportBlock);
+
   const { removedPlayers } = getState();
   if (removedPlayers.length > 0) {
     const removedCard = document.createElement('div');
@@ -497,6 +535,50 @@ function importPlayers() {
   });
   if (ta) ta.value = '';
   render();
+}
+
+// ponytail: group index+1 so round-trip works with manual group ids
+function formatPlayersExport(players, groups) {
+  const sorted = [...players].sort((a, b) => {
+    const idxA = groups.findIndex((g) => g.id === a.groupId);
+    const idxB = groups.findIndex((g) => g.id === b.groupId);
+    const orderA = idxA === -1 ? 999 : idxA;
+    const orderB = idxB === -1 ? 999 : idxB;
+    if (orderA !== orderB) return orderA - orderB;
+    return (a.name || '').localeCompare(b.name || '', 'pt-BR');
+  });
+  return sorted
+    .map((p) => {
+      const idx = groups.findIndex((g) => g.id === p.groupId);
+      const n = idx === -1 ? 1 : idx + 1;
+      return `${p.name}, ${n}`;
+    })
+    .join('\n');
+}
+
+function exportPlayers() {
+  const { players, groups } = getState();
+  const text = formatPlayersExport(players, groups);
+  const block = document.getElementById('players-export-block');
+  const ta = document.getElementById('players-export');
+  if (ta) ta.value = text;
+  if (block) block.hidden = false;
+}
+
+async function copyPlayersExport() {
+  const { players, groups } = getState();
+  const ta = document.getElementById('players-export');
+  const text = (ta?.value || '').trim() || formatPlayersExport(players, groups);
+  if (!text) {
+    dialog.error('Nenhum jogador para copiar', 'Copiar');
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    dialog.info('Lista copiada!', 'Copiar');
+  } catch {
+    dialog.error('Não foi possível copiar. Tente selecionar o texto manualmente.', 'Copiar');
+  }
 }
 
 function setPlayerGroup(playerId, groupId) {
