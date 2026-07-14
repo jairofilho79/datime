@@ -57,11 +57,23 @@ body {
   text-align: center;
 }
 
-.title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+.header-logo {
+  display: block;
+  height: 96px;
+  width: auto;
+  margin: 0 auto;
+}
+
+.header-logo--light {
+  display: none;
+}
+
+[data-theme="light"] .header-logo--dark {
+  display: none;
+}
+
+[data-theme="light"] .header-logo--light {
+  display: block;
 }
 
 .subtitle {
