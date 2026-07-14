@@ -62,6 +62,7 @@ function render() {
   const playMatchContainer = document.getElementById('play-match-container');
   if (!formContainer || !listContainer || !clearContainer || !playMatchContainer) return;
 
+  const preservedPlayerName = document.getElementById('player-name')?.value ?? '';
   const { groups, players, config } = getState();
 
   clearContainer.innerHTML = '';
@@ -150,6 +151,9 @@ function render() {
   if (lastCreatedGroupId) {
     groupSelect.value = lastCreatedGroupId;
     lastCreatedGroupId = null;
+  }
+  if (preservedPlayerName) {
+    form.querySelector('#player-name').value = preservedPlayerName;
   }
 
   const groupInfoTrigger = form.querySelector('#group-label-with-info');
