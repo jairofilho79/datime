@@ -565,7 +565,8 @@ body {
 }
 
 .config-row input,
-.config-row select {
+.config-row select,
+.config-row textarea {
   width: 100%;
   padding: 0.5rem 0.75rem;
   font-size: 1rem;
@@ -573,6 +574,12 @@ body {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
+}
+
+.config-row textarea {
+  min-height: 6rem;
+  resize: vertical;
+  font-family: inherit;
 }
 
 /* Clear e Jogar Partida (topo da página Configurações) */

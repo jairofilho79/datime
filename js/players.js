@@ -173,6 +173,35 @@ function render() {
     });
   }
 
+  const importCard = document.createElement('div');
+  importCard.className = 'config-block';
+  const importTitle = document.createElement('h3');
+  importTitle.textContent = 'Importar';
+  importCard.appendChild(importTitle);
+  const importRow = document.createElement('div');
+  importRow.className = 'config-row';
+  const importLabel = document.createElement('label');
+  importLabel.htmlFor = 'players-import';
+  importLabel.textContent = 'Uma linha por jogador (opcional: , grupo)';
+  const importTa = document.createElement('textarea');
+  importTa.id = 'players-import';
+  importTa.rows = 5;
+  importTa.placeholder = 'Jairo, 3\nAna G\n1. Pedro';
+  importRow.appendChild(importLabel);
+  importRow.appendChild(importTa);
+  importCard.appendChild(importRow);
+  const importBtnRow = document.createElement('div');
+  importBtnRow.className = 'config-row';
+  const importBtn = document.createElement('button');
+  importBtn.type = 'button';
+  importBtn.className = 'btn btn-primary btn-block';
+  importBtn.id = 'btn-import-players';
+  importBtn.textContent = 'Importar';
+  importBtn.addEventListener('click', importPlayers);
+  importBtnRow.appendChild(importBtn);
+  importCard.appendChild(importBtnRow);
+  formContainer.appendChild(importCard);
+
   // Ordenar: por ordem do grupo (Grupo 1, 2, …), depois alfabético pelo nome
   const sortedPlayers = [...players].sort((a, b) => {
     const idxA = groups.findIndex((g) => g.id === a.groupId);
@@ -416,6 +445,57 @@ function addPlayer() {
   const id = 'p' + Date.now();
   setState({ players: [...players, { id, name, groupId }] });
   nameEl.value = '';
+  render();
+}
+
+// ponytail: strip list noise + default group 1 when no ", N"
+function parseImportLine(line) {
+  let s = line.replace(/[\u00ad\u200b-\u200f\u2028-\u202f\u2060\uFEFF]/g, '').trim();
+  if (!s) return null;
+  s = s.replace(/^(?:\d+[.)]|[A-Za-z][.)]|[-*•–—])\s*/, '').trim();
+  if (!s) return null;
+  const withGroup = s.match(/^(.*?),\s*(\d+)\s*$/);
+  if (withGroup) {
+    const name = withGroup[1].trim().slice(0, 24);
+    const groupNum = parseInt(withGroup[2], 10);
+    if (!name || !Number.isFinite(groupNum) || groupNum < 1) return null;
+    return { name, groupNum };
+  }
+  const name = s.slice(0, 24);
+  return name ? { name, groupNum: 1 } : null;
+}
+
+function importPlayers() {
+  const ta = document.getElementById('players-import');
+  const text = ta?.value || '';
+  const parsed = [];
+  for (const line of text.split('\n')) {
+    const row = parseImportLine(line);
+    if (row) parsed.push(row);
+  }
+  if (parsed.length === 0) {
+    dialog.error('Cole nomes (ou nome, grupo)', 'Importar');
+    return;
+  }
+  const maxGroup = Math.max(...parsed.map((p) => p.groupNum));
+  const groups = Array.from({ length: maxGroup }, (_, i) => ({
+    id: 'g' + (i + 1),
+    name: `Grupo ${i + 1}`,
+  }));
+  const base = Date.now();
+  const players = parsed.map((p, i) => ({
+    id: 'p' + base + '-' + i,
+    name: p.name,
+    groupId: 'g' + p.groupNum,
+  }));
+  setState({
+    groups,
+    players,
+    teams: { teamA: [], teamB: [], reserves: [] },
+    removedPlayers: [],
+    lastRemixSummary: null,
+  });
+  if (ta) ta.value = '';
   render();
 }
 
