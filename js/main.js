@@ -10,18 +10,12 @@ import * as scoring from './scoring.js';
 import * as manualAssembly from './manualAssembly.js';
 import dialog from './dialog.js';
 
-const THEME_KEY = 'datime_theme';
-
-function getTheme() {
-  const saved = localStorage.getItem(THEME_KEY);
-  if (saved === 'light' || saved === 'dark') return saved;
-  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) return 'light';
-  return 'dark';
+function systemTheme() {
+  return matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
 }
 
 function setTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
-  localStorage.setItem(THEME_KEY, theme);
   const iconEl = document.getElementById('theme-toggle-icon');
   const btn = document.getElementById('theme-toggle');
   if (iconEl) iconEl.textContent = theme === 'dark' ? '☀' : '🌙';
@@ -29,8 +23,10 @@ function setTheme(theme) {
 }
 
 function initTheme() {
-  const theme = getTheme();
-  setTheme(theme);
+  setTheme(systemTheme());
+  matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
+    setTheme(e.matches ? 'light' : 'dark');
+  });
   document.getElementById('theme-toggle')?.addEventListener('click', () => {
     const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
     setTheme(next);
